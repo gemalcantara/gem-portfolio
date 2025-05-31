@@ -1,176 +1,212 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
+import ProjectGallery from './components/ProjectGallery';
+import emailjs from '@emailjs/browser';
+// Import data from separate files
+import { Project, projects } from '../data/projects';
+import { personalInfo } from '../data/personalInfo';
+import { skills } from '../data/skills';
+
+
+// Declare global grecaptcha type
+declare global {
+  interface Window {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    grecaptcha: any;
+  }
+}
 
 // Main App component for the portfolio
 function App() {
   // State to manage which project case study is currently open
-  const [openProject, setOpenProject] = useState(null);
+  const [openProject, setOpenProject] = useState<Project | null>(null);
+  const [notification, setNotification] = useState<{
+    message: string;
+    type: 'success' | 'error';
+    isVisible: boolean;
+  }>({ message: '', type: 'success', isVisible: false });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const form = useRef<HTMLFormElement | null>(null);
+  const emailJsPublicKey = process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY || 'YOUR_PUBLIC_KEY';
+  const emailJsServiceId = process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID || 'YOUR_SERVICE_ID';
+  const emailJsTemplateId = process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID || 'YOUR_TEMPLATE_ID';
+  const recaptchaSiteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || 'YOUR_RECAPTCHA_SITE_KEY';
 
-  // Your personal details, skills, and project data
-  const personalInfo = {
-    name: "GEMUEL JOY V. ALCANTARA",
-    title: "Full-Stack Web Developer",
-    tagline: "Leveraging cutting-edge technologies to transform complex ideas into robust and intuitive web applications.",
-    intro: "With a strong background in both front-end and back-end development, I specialize in crafting high-performance web systems and optimizing existing solutions for enhanced efficiency and security. My expertise spans e-commerce, content management, and AI-powered applications.",
-    email: "gem.alcantara.ga@gmail.com",
-    phone: "+639212434890",
-    location: "Novaliches, Quezon City",
-    linkedin: "https://www.linkedin.com/in/yourprofile", // Replace with actual LinkedIn URL
-    github: "https://github.com/yourprofile", // Replace with actual GitHub URL
-  };
+  // Load reCAPTCHA script on component mount
+  useEffect(() => {
+    const loadRecaptcha = () => {
+      if (!window.grecaptcha && recaptchaSiteKey !== 'YOUR_RECAPTCHA_SITE_KEY') {
+        const script = document.createElement('script');
+        script.src = `https://www.google.com/recaptcha/api.js?render=${recaptchaSiteKey}`;
+        script.async = true;
+        script.defer = true;
+        document.head.appendChild(script);
+      }
+    };
+    loadRecaptcha();
+  }, [recaptchaSiteKey]);
 
-  const skills = {
-    "Languages & Frameworks": ["PHP (Laravel)", "Node.js", "Vue.js", "React.js", "JavaScript", "TypeScript", "HTML", "CSS", "Bootstrap", "SASS"],
-    "Databases": ["MySQL", "MongoDB", "MS SQL", "Redis", "Firebase"],
-    "Tools & Technologies": ["Docker", "Digital Ocean", "REST APIs", "Git", "Metronics"],
-    "DevOps & Source Control": ["GitLab", "Git", "CI/CD"],
-    "AI Integration": ["OpenAI (GPT)", "Anthropic (Claude)"],
-  };
-
-  // Generic project data based on your resume
-  const projects = [
-    {
-      id: 'ecommerce',
-      title: "E-commerce Platform: Meal Plan Delivery",
-      icon: '🛒', // Placeholder icon
-      technologies: ["PHP", "Laravel", "Vue.js", "MySQL", "PayMaya", "PayMongo"],
-      shortDesc: "Engineered a full-featured online shopping system with integrated payment solutions and comprehensive reporting.",
-      caseStudy: {
-        role: "Full-Stack Developer",
-        challenge: "The client required a robust, scalable platform to manage online sales, inventory, and customer interactions for a meal plan delivery service, including secure payment processing.",
-        solution: "Developed a comprehensive full-stack e-commerce solution. Implemented secure payment gateway integrations (PayMaya, PayMongo) and built dynamic reporting dashboards for sales and inventory management. Designed and optimized scalable database architectures to handle high transactional volume.",
-        impact: "Improved transactional efficiency, provided a scalable foundation for future growth, and streamlined inventory management for the client.",
-        learnings: "Gained deeper insights into secure payment gateway integrations and optimizing database performance for high-traffic e-commerce applications."
-      }
-    },
-    {
-      id: 'cms',
-      title: "Custom Content Management System (CMS)",
-      icon: '📝', // Placeholder icon
-      technologies: ["PHP", "Laravel", "Node.js", "React.js", "MySQL"],
-      shortDesc: "Designed and developed custom CMS solutions enabling seamless content publishing and user management.",
-      caseStudy: {
-        role: "Full-Stack Developer",
-        challenge: "Clients needed flexible, custom solutions for content publishing and user management that off-the-shelf CMS platforms couldn't provide.",
-        solution: "Built bespoke CMS platforms tailored to specific client needs, allowing for easy content creation, editing, and publishing. Implemented robust user role and permission management systems, ensuring secure and efficient content workflows.",
-        impact: "Empowered clients with full control over their digital content, significantly reducing reliance on manual updates and external developers.",
-        learnings: "Enhanced understanding of modular architecture for CMS, focusing on extensibility and ease of use for non-technical users."
-      }
-    },
-    {
-      id: 'reservation',
-      title: "Real-Time Reservation & Booking System",
-      icon: '📅', // Placeholder icon
-      technologies: ["PHP", "Laravel", "JavaScript", "MySQL", "Firebase"],
-      shortDesc: "Built and optimized real-time booking platforms with calendar synchronization and automated notifications.",
-      caseStudy: {
-        role: "Full-Stack Developer",
-        challenge: "The need for a real-time booking system that could handle concurrent reservations, prevent double-bookings, and provide instant notifications to users.",
-        solution: "Developed an optimized booking platform with real-time calendar synchronization using Firebase for instant updates. Integrated automated notification systems (email/SMS) for booking confirmations and reminders. Focused on a user-friendly interface for seamless booking experiences.",
-        impact: "Significantly improved booking efficiency and customer satisfaction through real-time updates and automated communication.",
-        learnings: "Mastered real-time data synchronization techniques and complex calendar logic for high-availability booking systems."
-      }
-    },
-    {
-      id: 'chrome-extension',
-      title: "Browser Productivity Extension",
-      icon: '🔌', // Placeholder icon
-      technologies: ["JavaScript", "APIs", "HTML", "CSS"],
-      shortDesc: "Developed powerful browser extensions enhancing automation, productivity, and data extraction capabilities.",
-      caseStudy: {
-        role: "Full-Stack Developer",
-        challenge: "Identified opportunities to automate repetitive browser tasks and enhance user productivity through custom browser extensions.",
-        solution: "Designed and developed various Google Chrome Extensions that integrated with web APIs to automate data extraction, streamline workflows, and provide quick access to information, significantly boosting user efficiency.",
-        impact: "Provided users with powerful tools that automated tedious tasks, leading to measurable improvements in daily productivity and data handling.",
-        learnings: "Deepened understanding of browser API interactions, content scripts, and background processes for efficient extension development."
-      }
-    },
-    {
-      id: 'social-media',
-      title: "Interactive Social Media Application",
-      icon: '💬', // Placeholder icon
-      technologies: ["Node.js", "React.js", "MongoDB"],
-      shortDesc: "Created engagement-driven platforms integrating interactive features such as real-time messaging and notifications.",
-      caseStudy: {
-        role: "Full-Stack Developer",
-        challenge: "The goal was to build a dynamic social media platform that fosters user engagement through interactive features and real-time communication.",
-        solution: "Developed a robust social media application with real-time messaging capabilities and an instant notification system. Focused on creating a highly interactive user experience with dynamic content feeds and user profiles.",
-        impact: "Successfully launched a platform that encouraged active user participation and facilitated seamless communication, enhancing community interaction.",
-        learnings: "Gained extensive experience in building scalable real-time communication features and managing large datasets in a social networking context."
-      }
-    },
-    {
-      id: 'ai-chatbot',
-      title: "AI-Powered Chatbot Solution",
-      icon: '🤖', // Placeholder icon
-      technologies: ["OpenAI (GPT)", "Anthropic (Claude)", "Node.js", "Python"],
-      shortDesc: "Integrated OpenAI (GPT) and Anthropic (Claude) to develop intelligent chatbots for automated customer support and dynamic content generation.",
-      caseStudy: {
-        role: "Full-Stack Developer / AI Integrator",
-        challenge: "Clients sought to automate customer support and generate dynamic content using advanced AI models.",
-        solution: "Integrated leading AI models (OpenAI GPT, Anthropic Claude) into custom chatbot solutions. Developed sophisticated conversational flows to handle various customer inquiries and generate contextually relevant content, significantly improving response times and efficiency.",
-        impact: "Revolutionized customer support operations by providing instant, intelligent responses and enabled dynamic content creation, reducing manual effort.",
-        learnings: "Developed deep expertise in prompt engineering, API integration with large language models, and designing effective conversational AI experiences."
-      }
-    },
-    {
-      id: 'ride-hailing',
-      title: "Ride-Hailing & Logistics Platform",
-      icon: '🚗', // Placeholder icon
-      technologies: ["PHP", "Laravel", "JavaScript", "MySQL", "Geolocation APIs"],
-      shortDesc: "Designed and implemented ride-booking systems featuring real-time tracking, automated fare calculation, and driver-rider matching algorithms.",
-      caseStudy: {
-        role: "Full-Stack Developer",
-        challenge: "The objective was to create a reliable and efficient ride-hailing system that could handle real-time location tracking, dynamic fare calculations, and intelligent matching.",
-        solution: "Developed a comprehensive ride-booking platform, including robust backend logic for real-time GPS tracking, dynamic fare calculation based on distance and time, and sophisticated driver-rider matching algorithms. Implemented intuitive user interfaces for both riders and drivers.",
-        impact: "Provided a seamless and efficient platform for on-demand transportation, improving service delivery and operational logistics.",
-        learnings: "Gained hands-on experience with complex geolocation services, real-time data processing, and optimizing matching algorithms for efficiency."
-      }
-    },
-  ];
-
+  console.log('EmailJS Public Key:', emailJsPublicKey); // Log the public key for debugging
   // Function to handle opening a project case study
-  const handleOpenProject = (projectId) => {
-    setOpenProject(projects.find(p => p.id === projectId));
+  const handleOpenProject = (projectId: string): void => {
+    setOpenProject(projects.find(p => p.id === projectId) || null);
   };
 
   // Function to handle closing a project case study
-  const handleCloseProject = () => {
+  const handleCloseProject = (): void => {
     setOpenProject(null);
   };
 
-  // Contact form submission handler (placeholder)
-  const handleContactSubmit = (e) => {
+  // Function to show notification
+  const showNotification = (message: string, type: 'success' | 'error') => {
+    setNotification({ message, type, isVisible: true });
+    // Auto dismiss after 5 seconds
+    setTimeout(() => {
+      setNotification(prev => ({ ...prev, isVisible: false }));
+    }, 5000);
+  };
+
+  // Function to dismiss notification
+  const dismissNotification = () => {
+    setNotification(prev => ({ ...prev, isVisible: false }));
+  };  // Contact form submission handler with reCAPTCHA
+  const handleContactSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
-    // In a real application, you would send this data to a backend service
-    alert("Thank you for your message! I'll get back to you soon.");
-    e.target.reset(); // Clear the form
+    setIsSubmitting(true);
+
+    try {
+      if (form.current) {
+        // Extract form data
+        const formData = new FormData(form.current);
+        // Create template parameters object
+        const templateParams: Record<string, string> = {
+          name: formData.get('name') as string,
+          email: formData.get('email') as string,
+          title: formData.get('title') as string,
+          message: formData.get('message') as string,
+        };
+
+        // Debug: Log template parameters
+        console.log('Template parameters being sent:', templateParams);
+
+        // Execute reCAPTCHA v3 if enabled
+        if (window.grecaptcha && recaptchaSiteKey !== 'YOUR_RECAPTCHA_SITE_KEY') {
+          // Get reCAPTCHA token
+          const token = await new Promise<string>((resolve, reject) => {
+            window.grecaptcha.ready(() => {
+              window.grecaptcha.execute(recaptchaSiteKey, { action: 'contact_form' })
+                .then(resolve)
+                .catch(reject);
+            });
+          });
+
+          // Add reCAPTCHA token to template parameters
+          templateParams['g-recaptcha-response'] = token;
+
+          // Send email with explicit parameters
+          await emailjs.send(emailJsServiceId, emailJsTemplateId, templateParams, {
+            publicKey: emailJsPublicKey,
+          });
+        } else {
+          // Fallback without reCAPTCHA - use sendForm for better compatibility
+          await emailjs.sendForm(emailJsServiceId, emailJsTemplateId, form.current, {
+            publicKey: emailJsPublicKey,
+          });
+        }
+
+        showNotification("Thank you for your message! I'll get back to you soon.", 'success');
+        form.current.reset();
+      }
+    } catch (error) {
+      console.error('Form submission error:', error);
+      showNotification("Sorry, there was an error sending your message. Please try again or contact me directly via email.", 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-gray-50 font-inter text-gray-800 antialiased">
+      {/* Notification */}
+      {notification.isVisible && (
+        <div className={`fixed top-4 right-4 z-50 max-w-sm w-full ${notification.type === 'success'
+          ? 'bg-green-100 border-green-500 text-green-700'
+          : 'bg-red-100 border-red-500 text-red-700'
+          } border-l-4 p-4 rounded-lg shadow-lg transition-all duration-300 ease-in-out transform`}>
+          <div className="flex justify-between items-start">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                {notification.type === 'success' ? (
+                  <svg className="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                )}
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium">{notification.message}</p>
+              </div>
+            </div>
+            <button
+              onClick={dismissNotification}
+              className="ml-4 inline-flex text-gray-400 hover:text-gray-600 focus:outline-none"
+            >
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header/Hero Section */}
       <header className="relative bg-gradient-to-r from-blue-600 to-purple-700 text-white py-20 px-4 sm:px-6 lg:px-8 shadow-lg rounded-b-3xl">
         <div className="max-w-7xl mx-auto text-center">
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight mb-4 rounded-lg p-2 inline-block bg-white/15">
-              {personalInfo.name}
-            </h1>
+          {/* profile image here */}
+          <div className="mb-8">
+            <img
+              src="/1714809795925.jpg" // Replace with your profile image path
+              alt="Profile"
+              className="w-32 h-32 sm:w-40 sm:h-40 rounded-full border-4 border-white shadow-lg object-cover mx-auto"
+            />
+          </div>
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight mb-4 rounded-lg p-2 inline-block bg-white/15">
+            {personalInfo.name}
+          </h1>
           <p className="text-xl sm:text-2xl lg:text-3xl font-light mb-6">
             {personalInfo.title}
           </p>
           <p className="text-lg sm:text-xl max-w-3xl mx-auto mb-8 leading-relaxed">
             {personalInfo.tagline}
           </p>
-          <button
-            onClick={() => {
-              // Smooth scroll to projects section
-              document.getElementById('projects').scrollIntoView({ behavior: 'smooth' });
-            }}
-            className="bg-white text-blue-700 hover:bg-blue-100 px-8 py-3 rounded-full text-lg font-semibold shadow-md transition duration-300 ease-in-out transform hover:scale-105"
-          >
-            View My Projects
-          </button>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <button
+              onClick={() => {
+                // Smooth scroll to projects section
+                const projectsSection = document.getElementById('projects');
+                if (projectsSection) {
+                  projectsSection.scrollIntoView({ behavior: 'smooth' });
+                }
+              }}
+              className="bg-white text-blue-700 hover:bg-blue-100 px-8 py-3 rounded-full text-lg font-semibold shadow-md transition duration-300 ease-in-out transform hover:scale-105"
+            >
+              View My Projects
+            </button>
+            <a
+              href="/files/CV - Gemuel Joy Alcantara.pdf"
+              download="Gemuel_Joy_Alcantara_Resume.pdf"
+              className="bg-purple-600 text-white hover:bg-purple-700 px-8 py-3 rounded-full text-lg font-semibold shadow-md transition duration-300 ease-in-out transform hover:scale-105 flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Download Resume
+            </a>
+          </div>
         </div>
 
         {/* Social/Professional Links */}
@@ -251,8 +287,8 @@ function App() {
 
         {/* Project Case Study Modal/Section */}
         {openProject && (
-          <div className="fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50 overflow-y-auto">
-            <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto relative">
+          <div className="fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50 overflow-y-auto" onClick={handleCloseProject}>
+            <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto relative">
               <button
                 onClick={handleCloseProject}
                 className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 text-3xl font-bold"
@@ -261,7 +297,7 @@ function App() {
               </button>
               <h3 className="text-3xl font-bold text-gray-900 mb-4">{openProject.title}</h3>
               <p className="text-sm text-gray-600 mb-4">
-                **Role:** {openProject.caseStudy.role}
+                <strong>Role:</strong> {openProject.caseStudy.role}
               </p>
               <div className="mb-4">
                 <h4 className="text-lg font-semibold text-blue-700 mb-2">Technologies Used:</h4>
@@ -289,25 +325,35 @@ function App() {
                 <h4 className="text-lg font-semibold text-blue-700 mb-2">Key Learnings:</h4>
                 <p className="text-gray-700 leading-relaxed">{openProject.caseStudy.learnings}</p>
               </div>
+              {/* Project Gallery Component */}
+              {openProject.images && openProject.images.length > 0 && (
+                <div className="mb-6">
+                  <ProjectGallery
+                    projectId={openProject.id}
+                    images={openProject.images}
+                    title={openProject.title}
+                    className="mb-6"
+                  />
+                </div>
+              )}
               <p className="text-sm text-gray-500 italic">
-                *Due to client confidentiality, a live demo or direct screenshots are not available for this private project. This case study focuses on my contributions and the technologies applied.*
+                *Some images are representative examples. Due to client confidentiality, actual screenshots may differ or be limited.*
               </p>
             </div>
           </div>
         )}
 
         {/* Contact Section */}
-        <section className="bg-white p-8 rounded-2xl shadow-xl">
-          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-6 text-center">Let's Connect</h2>
+        <section className="bg-white p-8 rounded-2xl shadow-xl">          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-6 text-center">Let&apos;s Connect</h2>
           <p className="text-lg text-gray-700 leading-relaxed mb-8 text-center max-w-3xl mx-auto">
-            I'm always open to new opportunities and collaborations. Feel free to reach out!
+            I&apos;m always open to new opportunities and collaborations. Feel free to reach out!
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Contact Form */}
             <div className="bg-gray-100 p-6 rounded-xl shadow-md">
               <h3 className="text-xl font-semibold text-blue-700 mb-4">Send Me a Message</h3>
-              <form onSubmit={handleContactSubmit} className="space-y-4">
+              <form ref={form} onSubmit={handleContactSubmit} className="space-y-4">
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Name</label>
                   <input
@@ -315,17 +361,30 @@ function App() {
                     id="name"
                     name="name"
                     required
-                    className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    disabled={isSubmitting}
+                    className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
                   />
-                </div>
-                <div>
+                </div>                <div>
                   <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                   <input
                     type="email"
                     id="email"
                     name="email"
                     required
-                    className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    disabled={isSubmitting}
+                    className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+                  <input
+                    type="text"
+                    id="title"
+                    name="title"
+                    required
+                    disabled={isSubmitting}
+                    placeholder="What's this about?"
+                    className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
                   />
                 </div>
                 <div>
@@ -333,17 +392,42 @@ function App() {
                   <textarea
                     id="message"
                     name="message"
-                    rows="4"
+                    rows={4}
                     required
-                    className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    disabled={isSubmitting}
+                    className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
                   ></textarea>
                 </div>
                 <button
                   type="submit"
-                  className="w-full bg-purple-600 text-white py-2 rounded-full font-semibold hover:bg-purple-700 transition duration-300 shadow-md"
+                  disabled={isSubmitting}
+                  className="w-full bg-purple-600 text-white py-2 rounded-full font-semibold hover:bg-purple-700 transition duration-300 shadow-md disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center"
                 >
-                  Send Message
+                  {isSubmitting ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Sending...
+                    </>
+                  ) : (
+                    'Send Message'
+                  )}
                 </button>
+                {recaptchaSiteKey !== 'YOUR_RECAPTCHA_SITE_KEY' && (
+                  <p className="text-xs text-gray-500 text-center">
+                    This site is protected by reCAPTCHA and the Google{' '}
+                    <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                      Privacy Policy
+                    </a>{' '}
+                    and{' '}
+                    <a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                      Terms of Service
+                    </a>{' '}
+                    apply.
+                  </p>
+                )}
               </form>
             </div>
 
@@ -359,6 +443,17 @@ function App() {
               <p className="text-gray-700 mb-6">
                 <span className="font-medium">Location:</span> {personalInfo.location}
               </p>
+              {/* Resume Download Button */}
+              <a
+                href="/files/CV - Gemuel Joy Alcantara.pdf"
+                download="Gemuel_Joy_Alcantara_Resume.pdf"
+                className="bg-blue-600 text-white hover:bg-blue-700 px-6 py-2 rounded-full text-sm font-semibold shadow-md transition duration-300 mb-4 flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Download Resume
+              </a>
               <div className="flex space-x-6">
                 <a href={personalInfo.linkedin} target="_blank" rel="noopener noreferrer" className="text-blue-700 hover:text-blue-900 transition duration-300">
                   <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
