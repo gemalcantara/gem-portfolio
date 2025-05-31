@@ -24,6 +24,7 @@ NEXT_PUBLIC_EMAILJS_TEMPLATE_ID=your_emailjs_template_id_here
 
 # Google reCAPTCHA
 NEXT_PUBLIC_RECAPTCHA_SITE_KEY=your_recaptcha_site_key_here
+RECAPTCHA_SECRET_KEY=your_recaptcha_secret_key_here
 ```
 
 ### 2. EmailJS Configuration
@@ -73,6 +74,11 @@ NEXT_PUBLIC_RECAPTCHA_SITE_KEY=your_recaptcha_site_key_here
 3. **Get Site Key**
    - Copy the Site Key from the reCAPTCHA dashboard
    - Add it to your `.env.local` file
+
+4. **Get Secret Key**
+   - Copy the Secret Key from the reCAPTCHA dashboard
+   - Add it to your `.env.local` file as `RECAPTCHA_SECRET_KEY`
+   - **Important**: The secret key should never be exposed to the client-side
 
 ### 4. Content Customization
 

@@ -47,7 +47,6 @@ function App() {
     loadRecaptcha();
   }, [recaptchaSiteKey]);
 
-  console.log('EmailJS Public Key:', emailJsPublicKey); // Log the public key for debugging
   // Function to handle opening a project case study
   const handleOpenProject = (projectId: string): void => {
     setOpenProject(projects.find(p => p.id === projectId) || null);
@@ -85,12 +84,7 @@ function App() {
           email: formData.get('email') as string,
           title: formData.get('title') as string,
           message: formData.get('message') as string,
-        };
-
-        // Debug: Log template parameters
-        console.log('Template parameters being sent:', templateParams);
-
-        // Execute reCAPTCHA v3 if enabled
+        };        // Execute reCAPTCHA v3 if enabled
         if (window.grecaptcha && recaptchaSiteKey !== 'YOUR_RECAPTCHA_SITE_KEY') {
           // Get reCAPTCHA token
           const token = await new Promise<string>((resolve, reject) => {
@@ -101,10 +95,18 @@ function App() {
             });
           });
 
-          // Add reCAPTCHA token to template parameters
-          templateParams['g-recaptcha-response'] = token;
-
-          // Send email with explicit parameters
+          // Verify token with server-side API
+          const verifyResponse = await fetch('/api/verify-recaptcha', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token }),
+          });
+          
+          const verifyResult = await verifyResponse.json();
+          
+          if (!verifyResult.success) {
+            throw new Error(`reCAPTCHA verification failed: ${verifyResult.error}`);
+          }          // Send email after successful verification (without token in parameters)
           await emailjs.send(emailJsServiceId, emailJsTemplateId, templateParams, {
             publicKey: emailJsPublicKey,
           });
@@ -169,7 +171,7 @@ function App() {
           {/* profile image here */}
           <div className="mb-8">
             <img
-              src="/1714809795925.jpg" // Replace with your profile image path
+              src={personalInfo.photo}
               alt="Profile"
               className="w-32 h-32 sm:w-40 sm:h-40 rounded-full border-4 border-white shadow-lg object-cover mx-auto"
             />
@@ -197,8 +199,8 @@ function App() {
               View My Projects
             </button>
             <a
-              href="/files/CV - Gemuel Joy Alcantara.pdf"
-              download="Gemuel_Joy_Alcantara_Resume.pdf"
+              href={personalInfo.resume}
+              download={personalInfo.resumeName}
               className="bg-purple-600 text-white hover:bg-purple-700 px-8 py-3 rounded-full text-lg font-semibold shadow-md transition duration-300 ease-in-out transform hover:scale-105 flex items-center gap-2"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -445,8 +447,8 @@ function App() {
               </p>
               {/* Resume Download Button */}
               <a
-                href="/files/CV - Gemuel Joy Alcantara.pdf"
-                download="Gemuel_Joy_Alcantara_Resume.pdf"
+                href={personalInfo.resume}
+                download={personalInfo.resumeName}
                 className="bg-blue-600 text-white hover:bg-blue-700 px-6 py-2 rounded-full text-sm font-semibold shadow-md transition duration-300 mb-4 flex items-center gap-2"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
